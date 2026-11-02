@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Companion site to an ESSEC E-Business report on Garfield.Law and AI-native law firms.">
+<title>Billable Hours to Pay-per-Document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single "case file" column; sections read like tabs of a court bundle, numbered as exhibits */
+:root{
+  --paper:#f5f6f3; --sheet:#ffffff; --ink:#15212b; --muted:#5b6670; --rule:#d5d9d6;
+  --law:#1f5f52; --law-soft:#dcebe6; --flag:#b8641b; --flag-soft:#f6e3cf; --bad:#a3352b;
+  --f-display:"Libre Caslon Text", Georgia, "Times New Roman", serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#10171c; --sheet:#172128; --ink:#e7ece9; --muted:#9aa6ad; --rule:#2c3a42;
+  --law:#6fc2ab; --law-soft:#1d3a33; --flag:#e7a062; --flag-soft:#3d2a19; --bad:#e17a6f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#10171c; --sheet:#172128; --ink:#e7ece9; --muted:#9aa6ad; --rule:#2c3a42;
+  --law:#6fc2ab; --law-soft:#1d3a33; --flag:#e7a062; --flag-soft:#3d2a19; --bad:#e17a6f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;padding-block:40px 64px;display:grid;gap:56px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.1}
+h2{font-size:1.75rem}
+h3{font-size:1.05rem}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--law)}
+header{display:grid;gap:16px;border-bottom:2px solid var(--ink);padding-bottom:28px}
+header .lead{font-size:1.12rem;color:var(--muted)}
+.meta{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px}
+section{display:grid;gap:18px}
+.sec-head{display:grid;gap:6px}
+/* canvas */
+.toggle{display:inline-flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;width:max-content}
+.toggle button{font:600 .9rem var(--f-body);padding:8px 18px;background:transparent;color:var(--ink);border:0;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.toggle button:focus-visible,.blk:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--law);outline-offset:2px}
+.canvas-scroll{overflow-x:auto}
+.canvas{display:grid;grid-template-columns:repeat(10,1fr);grid-auto-rows:minmax(118px,auto);gap:6px;min-width:760px}
+.blk{background:var(--sheet);border:1.5px solid var(--rule);padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;display:grid;align-content:start;gap:4px;font-size:.88rem;line-height:1.4}
+.blk .lbl{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.blk.r{background:var(--flag-soft);border-color:var(--flag)}
+.blk.m{border-color:var(--flag);border-style:dashed}
+.blk.sel{outline:3px solid var(--law);outline-offset:-3px}
+.kp{grid-column:1/3;grid-row:1/3}.ka{grid-column:3/5;grid-row:1}.kr{grid-column:3/5;grid-row:2}.vp{grid-column:5/7;grid-row:1/3}
+.cr{grid-column:7/9;grid-row:1}.ch{grid-column:7/9;grid-row:2}.cs{grid-column:9/11;grid-row:1/3}.co{grid-column:1/6;grid-row:3}.rs{grid-column:6/11;grid-row:3}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.85rem;color:var(--muted)}
+.sw{display:inline-block;width:16px;height:12px;vertical-align:-1px;margin-right:6px;border:1.5px solid var(--flag)}
+.note{background:var(--sheet);border-left:4px solid var(--law);padding:14px 18px;display:grid;gap:6px}
+.note .src{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+/* simulator */
+.sim{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:24px;background:var(--sheet);border:1.5px solid var(--rule);padding:22px}
+@media (max-width:760px){.sim{grid-template-columns:1fr}}
+.ctrl{display:grid;gap:16px;align-content:start}
+.ctrl label{display:grid;gap:6px;font-weight:500;font-size:.92rem}
+.ctrl select,.ctrl input[type=number]{font:inherit;padding:8px 10px;border:1.5px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:4px;width:100%}
+input[type=range]{width:100%;accent-color:var(--law)}
+.amt{font-family:var(--f-mono);font-size:1.6rem;font-variant-numeric:tabular-nums}
+.out{display:grid;gap:18px;min-width:0}
+.bars{display:grid;gap:14px}
+.bar-row{display:grid;gap:4px}
+.bar-top{display:flex;justify-content:space-between;gap:10px;font-size:.9rem}
+.bar-top b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500}
+.track{height:22px;background:var(--paper);border:1px solid var(--rule);position:relative;overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;background:var(--bad)}
+.fill.g{background:var(--law)}
+.fill.range{background:repeating-linear-gradient(135deg,var(--law) 0 6px,var(--law-soft) 6px 12px)}
+.verdict{font-family:var(--f-display);font-size:1.15rem}
+.tbl{width:100%;border-collapse:collapse;font-size:.86rem;font-variant-numeric:tabular-nums}
+.tbl td,.tbl th{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:left}
+.tbl td.n,.tbl th.n{text-align:right;font-family:var(--f-mono)}
+.small{font-size:.82rem;color:var(--muted)}
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;display:grid;gap:0;border-left:2px solid var(--ink);margin-left:6px}
+.tl li{display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;padding:10px 0 10px 18px;position:relative}
+.tl li::before{content:"";position:absolute;left:-7px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--sheet);border:2px solid var(--ink)}
+.tl li.g::before{background:var(--flag);border-color:var(--flag)}
+.tl time{font-family:var(--f-mono);font-size:.82rem;color:var(--muted);padding-top:2px}
+.tl .who{font-weight:600}
+@media (max-width:520px){.tl li{grid-template-columns:1fr;gap:2px}}
+.srcs{display:grid;gap:8px;font-size:.88rem;padding-left:1.2em;margin:0}
+.srcs a{color:var(--law)}
+footer{border-top:1px solid var(--rule);padding-top:18px;font-size:.82rem;color:var(--muted);display:grid;gap:6px}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .35s ease}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Companion site &middot; E-Business &amp; Digital Disruption &middot; Individual project 2026</span>
+  <h1>From Billable Hours to Pay-per-Document</h1>
+  <p class="lead">How generative AI is changing the business model of small-claims legal services in England &amp; Wales, through the case of Garfield.Law, the first AI-based law firm authorised by the Solicitors Regulation Authority (6 May 2025).</p>
+  <div class="meta"><span>Option 1 &middot; Business Model Canvas</span><span>Figures as of Nov 2026</span><span>Marius Rang &middot; ESSEC &middot; not affiliated with Garfield.Law</span></div>
+</header>
+
+<section aria-labelledby="h-canvas">
+  <div class="sec-head"><span class="eyebrow">Exhibit 1</span><h2 id="h-canvas">The canvas, before and after</h2>
+  <p>Switch between the two business models. In the AI-native version, filled blocks changed radically and dashed blocks changed moderately. Tap any block to see what changed and where the evidence comes from.</p></div>
+  <div class="toggle" role="group" aria-label="Choose business model">
+    <button id="btn-before" type="button" aria-pressed="false">Before: high-street firm</button>
+    <button id="btn-after" type="button" aria-pressed="true">After: Garfield.Law</button>
+  </div>
+  <div class="canvas-scroll"><div class="canvas" id="canvas"></div></div>
+  <div class="legend" id="legend"><span><span class="sw" style="background:var(--flag-soft)"></span>Radical change</span><span><span class="sw" style="border-style:dashed"></span>Moderate change</span></div>
+  <div class="note" id="note" aria-live="polite"></div>
+</section>
+
+<section aria-labelledby="h-sim">
+  <div class="sec-head"><span class="eyebrow">Exhibit 2</span><h2 id="h-sim">What does it cost to chase a debt?</h2>
+  <p>On the small claims track (claims up to &pound;10,000) the winner usually cannot recover solicitor fees from the debtor (CPR r. 27.14). This simulator compares what a creditor pays out of pocket.</p></div>
+  <div class="sim">
+    <div class="ctrl">
+      <label for="debt">Amount owed <span class="amt" id="debtOut">&pound;3,000</span>
+        <input id="debt" type="range" min="100" max="10000" step="100" value="3000"></label>
+      <label for="stage">How far the case goes
+        <select id="stage">
+          <option value="pre">Pre-action: reminder + letter before action</option>
+          <option value="und">Claim issued, debtor does not defend</option>
+          <option value="trial" selected>Debtor defends, case goes to trial</option>
+        </select></label>
+      <label for="grade">Solicitor rate (2026 guideline, National 1)
+        <select id="grade">
+          <option value="142" selected>Grade D, trainee/paralegal: &pound;142/h</option>
+          <option value="201">Grade C, junior solicitor: &pound;201/h</option>
+          <option value="295">Grade A, senior solicitor: &pound;295/h</option>
+        </select></label>
+      <p class="small">Hours assumed: 1.5 h pre-action, 3.5 h to default judgment, 18 h to trial. These hours are the author's estimate, not official figures.</p>
+    </div>
+    <div class="out">
+      <div class="bars">
+        <div class="bar-row"><div class="bar-top"><span>Solicitor fees</span><b id="solV"></b></div><div class="track"><div class="fill" id="solB"></div></div></div>
+        <div class="bar-row"><div class="bar-top"><span>Garfield.Law fees</span><b id="garV"></b></div><div class="track"><div class="fill g" id="garB"></div></div></div>
+        <div class="bar-row"><div class="bar-top"><span>Court fees (same for both, recoverable if you win)</span><b id="crtV"></b></div><div class="track"><div class="fill g" id="crtB" style="background:var(--muted)"></div></div></div>
+      </div>
+      <p class="verdict" id="verdict"></p>
+      <table class="tbl"><thead><tr><th>Share of the debt spent on legal fees</th><th class="n">Solicitor</th><th class="n">Garfield</th></tr></thead>
+      <tbody><tr><td>This scenario</td><td class="n" id="solP"></td><td class="n" id="garP"></td></tr></tbody></table>
+      <p class="small" id="garNote"></p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-tl">
+  <div class="sec-head"><span class="eyebrow">Exhibit 3</span><h2 id="h-tl">AI-native law firms, 2024&ndash;2026</h2>
+  <p>Garfield is part of a wider move: firms that own both the AI and the regulated law firm, and do not bill by the hour. Garfield milestones are marked in orange.</p></div>
+  <ol class="tl">
+    <li><time>Dec 2024</time><div><span class="who">Lawhive</span> raises a $40m Series A for its fixed-fee legal platform with AI assistant "Lawrence".</div></li>
+    <li><time>Jan 2025</time><div><span class="who">Crosby</span> soft-launches in the US: an AI-powered law firm for contract review, seed-funded by Sequoia.</div></li>
+    <li class="g"><time>Mar 2025</time><div><span class="who">Garfield.Law</span> quietly starts taking its first users.</div></li>
+    <li class="g"><time>6 May 2025</time><div><span class="who">SRA</span> announces Garfield as the first purely AI-based firm authorised in England &amp; Wales.</div></li>
+    <li class="g"><time>Jul&ndash;Aug 2025</time><div><span class="who">Garfield</span> issues its first claim forms; 12+ law firms use it under their own brand.</div></li>
+    <li><time>Sep 2025</time><div><span class="who">Lawhive</span> buys Woodstock Legal Services: a tech platform acquires a regulated law firm.</div></li>
+    <li><time>Nov 2025</time><div><span class="who">Norm Ai</span> launches Norm Law, an AI-native firm for financial institutions, backed by Blackstone.</div></li>
+    <li><time>Mar 2026</time><div><span class="who">Crosby</span> raises a $60m Series B to "replace" the billable hour with outcome-based billing.</div></li>
+    <li class="g"><time>14 May 2026</time><div><span class="who">Garfield</span> wins its first contested trial: &pound;7,000 recovered for about &pound;400 in fees. 600+ claims started, &pound;500k+ recovered.</div></li>
+  </ol>
+</section>
+
+<section aria-labelledby="h-src">
+  <div class="sec-head"><span class="eyebrow">Sources</span><h2 id="h-src">Where the numbers come from</h2></div>
+  <ol class="srcs">
+    <li><a href="https://www.sra.org.uk/sra/news/press/garfield-ai-authorised/" target="_blank" rel="noopener">SRA (2025). SRA approves first AI-driven law firm.</a></li>
+    <li><a href="https://www.garfield.law/press/garfield-ai-wins-first-court-trial-with-regulated-ai-lawyer" target="_blank" rel="noopener">Garfield AI (2026). First court trial win.</a></li>
+    <li><a href="https://www.garfield.law/" target="_blank" rel="noopener">Garfield AI (n.d.). Pricing and service.</a></li>
+    <li><a href="https://www.legalfutures.co.uk/latest-news/lawyers-using-ai-law-firm-to-recover-their-debts" target="_blank" rel="noopener">Hilborne, N. (2025). Lawyers using AI law firm to recover their debts. Legal Futures.</a></li>
+    <li><a href="https://www.nonbillable.co.uk/posts/philip-young-interview" target="_blank" rel="noopener">Attinger, O. (2025). Inside Garfield AI. Nonbillable.</a></li>
+    <li><a href="https://www.legislation.gov.uk/uksi/1998/3132/part/27" target="_blank" rel="noopener">Civil Procedure Rules 1998, r. 27.14.</a></li>
+    <li><a href="https://www.gov.uk/guidance/solicitors-guideline-hourly-rates" target="_blank" rel="noopener">HMCTS (2026). Solicitors' guideline hourly rates.</a></li>
+    <li><a href="https://www.gov.uk/make-court-claim-for-money/fees" target="_blank" rel="noopener">HMCTS. Court claim fees</a> and <a href="https://www.gov.uk/government/publications/fees-in-the-civil-and-family-courts-main-fees-ex50/civil-court-fees-ex50" target="_blank" rel="noopener">hearing fees (EX50)</a>.</li>
+    <li><a href="https://www.cityam.com/businesses-owed-112bn/" target="_blank" rel="noopener">Alencar, M. (2025). Small businesses "held back" by &pound;112bn of late payments. City AM.</a></li>
+    <li><a href="https://techcrunch.com/2025/06/17/sequoia-backed-crosby-launches-a-new-kind-of-ai-powered-law-firm" target="_blank" rel="noopener">Bort, J. (2025). Sequoia-backed Crosby launches a new kind of AI-powered law firm. TechCrunch.</a></li>
+    <li><a href="https://www.luxcapital.com/news/were-backing-crosby-to-end-the-billiable-hour-for-laywers" target="_blank" rel="noopener">Lux Capital (2026). Backing Crosby.</a></li>
+    <li><a href="https://www.lawnext.com/2025/11/norm-ai-raises-50-million-from-blackstone-launches-ai-native-law-firm.html" target="_blank" rel="noopener">LawNext (2025). Norm Ai launches AI-native law firm.</a></li>
+    <li><a href="https://www.legalcheek.com/2025/09/google-backed-ai-platform-buys-law-firm-in-uk-legal-industry-first/" target="_blank" rel="noopener">Szaniszlo, J. (2025). Google-backed AI platform buys law firm. Legal Cheek.</a></li>
+    <li><a href="https://www.artificiallawyer.com/2024/12/05/lawyer-finder-site-lawhive-raises-40m/" target="_blank" rel="noopener">Artificial Lawyer (2024). Lawhive raises $40m.</a></li>
+  </ol>
+</section>
+
+<footer>
+  <span>Companion to the written report (the report is the assessed document; this page only extends it).</span>
+  <span>Independent student analysis. Not affiliated with or endorsed by Garfield.Law or any firm mentioned. Not legal advice.</span>
+</footer>
+</div>
+
+<script>
+const B={
+ before:{
+  kp:["Key partners","Barristers for hearings; county courts; enforcement agents; referral networks (accountants, banks)."],
+  ka:["Key activities","Drafting letters and claim forms by hand; case management; advice; preparing bundles."],
+  kr:["Key resources","Qualified solicitors and paralegals; partners' capital; local reputation."],
+  vp:["Value proposition","Expert, tailored representation by a named lawyer. Slow, and for a £3,000 debt the bill can eat most of what is recovered."],
+  cr:["Customer relationships","Personal, face-to-face or phone; one solicitor per file."],
+  ch:["Channels","High-street office, word of mouth, phone and email."],
+  cs:["Customer segments","SMEs with debts big enough to justify fees. Most debts under £10k are written off."],
+  co:["Cost structure","Mostly fixed salaries and rent. Every extra file needs extra lawyer hours."],
+  rs:["Revenue streams","Billable hour (£142–£295/h outside London) or fixed fees. Mostly not recoverable on the small claims track."]},
+ after:{
+  kp:["Key partners","LLM and cloud providers; Sage, QuickBooks, FreeAgent; 12+ partner law firms (white-label); barristers for trial only; the SRA as close supervisor.","m","Partners shift from legal (barristers, bailiffs) to technology and distribution partners. Source: Hilborne (2025); Garfield AI (n.d.)."],
+  ka:["Key activities","Building software and the expert system; quality-checking AI output; SRA compliance; human review moving to sampling.","m","Lawyer work becomes supervision of a system. Source: Attinger (2025); SRA (2025)."],
+  kr:["Key resources","Proprietary expert system + LLMs; the SRA authorisation itself; founder's litigation know-how; case data.","r","The regulatory licence becomes a hard-to-copy asset: a first-mover advantage. Source: SRA (2025); Armour & Sako (2020)."],
+  vp:["Value proposition","Regulated, insured help: £2 reminder, £7.50 letter before action, about £400 to a defended trial. Available 7 days a week.","r","Cheap and predictable instead of expert and personal. The '20× faster, 10× cheaper' slogan is the company's own claim. Source: Garfield AI (n.d., 2026)."],
+  cr:["Customer relationships","Guided self-service: the client approves every step; a named solicitor stays accountable.","m","The relationship moves from a person to a process, with a human in the loop. Source: SRA (2025)."],
+  ch:["Channels","Web platform; accounting-software integrations; partner firms' own branding.","m","Debt recovery starts where the unpaid invoice already sits. White-label = re-intermediation of law firms (Lecture 2). Source: Garfield AI (n.d.)."],
+  cs:["Customer segments","Sole traders, freelancers and SMEs with claims of £30–£10,000; plus law firms and accountants (B2B).","r","A new market of non-consumers: only a quarter of small businesses get professional legal help (LSB, 2021). Source: Garfield AI (2026); Hilborne (2025)."],
+  co:["Cost structure","Software development, pay-per-use compute and insurance; about 15 staff. Marginal cost of one more letter close to zero.","r","Freeconomics logic (Lecture 2): near-zero marginal cost makes a £2 price viable at scale. Source: Attinger (2025)."],
+  rs:["Revenue streams","Fixed price per document / per step + white-label revenue. Price no longer depends on lawyer time.","r","From fee-for-service priced by time to per-transaction pricing: the end of the billable hour for this segment. Source: Garfield AI (n.d.); Laudon & Traver (2024)."]}
+};
+const order=["kp","ka","kr","vp","cr","ch","cs","co","rs"];
+let mode="after", sel="rs";
+const canvas=document.getElementById("canvas"), note=document.getElementById("note");
+function renderCanvas(){
+  canvas.innerHTML="";
+  order.forEach(k=>{
+    const d=B[mode][k]; const el=document.createElement("button"); el.type="button";
+    el.className="blk "+k+(mode==="after"?" "+d[2]:"")+(k===sel?" sel":""); el.id="blk-"+k;
+    el.innerHTML='<span class="lbl">'+d[0]+'</span><span>'+d[1]+'</span>';
+    el.addEventListener("click",()=>{sel=k;renderCanvas();});
+    canvas.appendChild(el);
+  });
+  const a=B.after[sel], b=B.before[sel];
+  note.innerHTML='<h3>'+a[0]+(a[2]==="r"?" &middot; radical change":" &middot; moderate change")+'</h3><p><b>Before:</b> '+b[1]+'</p><p><b>After:</b> '+a[1]+'</p><p class="src">'+a[3]+'</p>';
+  document.getElementById("btn-before").setAttribute("aria-pressed",mode==="before");
+  document.getElementById("btn-after").setAttribute("aria-pressed",mode==="after");
+  document.getElementById("legend").hidden = mode==="before";
+}
+document.getElementById("btn-before").addEventListener("click",()=>{mode="before";renderCanvas();});
+document.getElementById("btn-after").addEventListener("click",()=>{mode="after";renderCanvas();});
+renderCanvas();
+
+const gbp=n=>"£"+(Number.isInteger(n)||n>=100?Math.round(n).toLocaleString("en-GB"):n.toFixed(2));
+function claimFee(x){if(x<=300)return 35;if(x<=500)return 50;if(x<=1000)return 70;if(x<=1500)return 80;if(x<=3000)return 115;if(x<=5000)return 205;return 455;}
+function hearingFee(x){if(x<=300)return 27;if(x<=500)return 59;if(x<=1000)return 85;if(x<=1500)return 123;if(x<=3000)return 181;return 346;}
+const HOURS={pre:1.5,und:3.5,trial:18};
+function sim(){
+  const debt=+document.getElementById("debt").value, st=document.getElementById("stage").value, rate=+document.getElementById("grade").value;
+  document.getElementById("debtOut").textContent=gbp(debt);
+  const sol=HOURS[st]*rate;
+  let gLo,gHi,gNote;
+  if(st==="pre"){gLo=gHi=9.5;gNote="Garfield: £2 reminder + £7.50 letter before action (published prices).";}
+  else if(st==="und"){gLo=9.5;gHi=400;gNote="Garfield's price for issuing a claim is not published: shown as a range between the pre-action price and the ~£400 reported for a full defended trial.";}
+  else{gLo=gHi=400;gNote="Garfield: about £400 in fees for the May 2026 defended trial (Garfield AI, 2026). Barrister fees for the hearing may come on top.";}
+  const court= st==="pre"?0:(claimFee(debt)+(st==="trial"?hearingFee(debt):0));
+  const max=Math.max(debt,sol,court,gHi);
+  const w=v=>Math.min(100,v/max*100)+"%";
+  document.getElementById("solV").textContent=gbp(sol);
+  document.getElementById("solB").style.width=w(sol);
+  document.getElementById("garV").textContent= gLo===gHi?gbp(gHi):gbp(gLo)+" – "+gbp(gHi);
+  const gb=document.getElementById("garB"); gb.style.width=w(gHi); gb.className="fill g"+(gLo===gHi?"":" range");
+  document.getElementById("crtV").textContent=court?gbp(court):"none yet";
+  document.getElementById("crtB").style.width=w(court);
+  const sp=sol/debt*100, gp=gHi/debt*100;
+  document.getElementById("solP").textContent=Math.round(sp)+"%";
+  document.getElementById("garP").textContent=(gLo===gHi?"":"up to ")+(gp<1?gp.toFixed(1):Math.round(gp))+"%";
+  const v=document.getElementById("verdict");
+  if(sol>=debt) v.textContent="With a solicitor, chasing this debt costs more than the debt itself. Most creditors would give up.";
+  else if(sp>40) v.textContent="With a solicitor, "+Math.round(sp)+"% of the debt goes on fees that cannot be recovered. With Garfield, "+(gLo===gHi?"":"at most ")+(gp<1?gp.toFixed(1):Math.round(gp))+"%.";
+  else v.textContent="Both options are viable here, but Garfield leaves the creditor "+gbp(sol-gHi)+" better off.";
+  document.getElementById("garNote").textContent=gNote;
+}
+["debt","stage","grade"].forEach(id=>document.getElementById(id).addEventListener("input",sim));
+sim();
+</script>
+
+</body>
+</html>
